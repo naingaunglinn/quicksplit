@@ -1,29 +1,32 @@
 'use client'
 
-import { Copy, LogIn } from 'lucide-react'
+import { useState } from 'react'
+import { Share2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { useMeetingStore } from '@/store/meetingStore'
 import { useUser } from '@/lib/hooks/useUser'
-import { supabase } from '@/lib/supabase/client'
+import ShareDialog from '@/components/ShareDialog'
 
-export default function ShareLink({ staticUrl }: { staticUrl?: string }) {
-  const storeShareUrl = useMeetingStore(s => s.shareUrl)
-  const isSaving      = useMeetingStore(s => s.isSaving)
-  const saveMeeting   = useMeetingStore(s => s.saveMeeting)
-  const user          = useUser()
+interface Props {
+  staticUrl?:  string
+  meetingId?:  string
+}
 
-  // staticUrl prop wins (used on detail pages where meeting is already saved)
-  const shareUrl = staticUrl ?? storeShareUrl
-  const fullUrl  = shareUrl
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}${shareUrl}`
-    : ''
+export default function ShareLink({ staticUrl: _staticUrl, meetingId }: Props) {
+  const storeMeetingId = useMeetingStore(s => s.meetingId)
+  const isSaving       = useMeetingStore(s => s.isSaving)
+  const saveMeeting    = useMeetingStore(s => s.saveMeeting)
+  const user           = useUser()
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(fullUrl)
-    toast.success('Link copied!')
+  const [dialogOpen, setDialogOpen] = useState(false)
+
+  const effectiveMeetingId = meetingId ?? storeMeetingId
+
+  async function handleSaveAndShare() {
+    await saveMeeting()
+    setDialogOpen(true)
   }
 
   async function handleSignIn() {
@@ -45,33 +48,32 @@ export default function ShareLink({ staticUrl }: { staticUrl?: string }) {
         Share This Meeting
       </p>
 
-      {shareUrl ? (
-        <Card className="p-5 shadow-sm">
-          <p className="text-xs font-medium text-muted-foreground mb-2">
-            Your meeting link
-          </p>
-          <div className="flex gap-2">
-            <Input
-              readOnly
-              value={fullUrl}
-              className="font-mono text-sm"
-            />
-            <Button variant="outline" onClick={handleCopy}>
-              <Copy size={16} />
-            </Button>
+      {effectiveMeetingId ? (
+        <Card className="p-5 flex items-center justify-between shadow-sm">
+          <div>
+            <p className="font-medium text-sm">Manage sharing</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Control who can view this meeting.
+            </p>
           </div>
+          <Button
+            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            onClick={() => setDialogOpen(true)}
+          >
+            <Share2 size={14} className="mr-1.5" /> Share
+          </Button>
         </Card>
       ) : user ? (
         <Card className="p-5 flex items-center justify-between shadow-sm">
           <div>
             <p className="font-medium text-sm">Save &amp; generate link</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Creates a public read-only page anyone can open.
+              Save this meeting to manage sharing settings.
             </p>
           </div>
           <Button
             className="bg-indigo-600 hover:bg-indigo-700 text-white"
-            onClick={saveMeeting}
+            onClick={handleSaveAndShare}
             disabled={isSaving}
           >
             {isSaving ? 'Saving...' : 'Save & Share'}
@@ -94,6 +96,14 @@ export default function ShareLink({ staticUrl }: { staticUrl?: string }) {
           </Button>
         </Card>
       ) : null}
+
+      {effectiveMeetingId && (
+        <ShareDialog
+          meetingId={effectiveMeetingId}
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+        />
+      )}
     </div>
   )
 }

@@ -29,6 +29,15 @@ export default function AuthCallbackPage() {
     const accessToken  = hash.get('access_token')
     const refreshToken = hash.get('refresh_token')
 
+    function getRedirectTarget(): string {
+      const stored = sessionStorage.getItem('auth_redirect')
+      if (stored) {
+        sessionStorage.removeItem('auth_redirect')
+        return stored
+      }
+      return '/'
+    }
+
     // Implicit flow — tokens present in hash, set session directly
     if (accessToken && refreshToken) {
       supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
@@ -38,7 +47,7 @@ export default function AuthCallbackPage() {
             return
           }
           await syncUserProfile(data.session.user)
-          router.replace('/')
+          router.replace(getRedirectTarget())
         })
       return
     }
@@ -55,7 +64,7 @@ export default function AuthCallbackPage() {
             return
           }
           await syncUserProfile(data.session.user)
-          router.replace('/')
+          router.replace(getRedirectTarget())
         })
       return
     }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { teamsSchema } from '@/lib/validate'
 import { postMeetingToTeams } from '@/lib/teams'
 import { createClient } from '@/lib/supabase/server'
+import { config } from '@/lib/config'
 
 export const runtime = 'nodejs'
 
@@ -18,7 +19,7 @@ export async function POST(req: Request) {
     }
 
     const { meetingId, webhookUrl, summary } = parsed.data
-    const meetingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/meeting/${meetingId}`
+    const meetingUrl = `${config.NEXT_PUBLIC_APP_URL}/meeting/${meetingId}`
 
     await postMeetingToTeams(
       webhookUrl,

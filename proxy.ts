@@ -76,10 +76,12 @@ export async function proxy(request: NextRequest) {
   }
 
   // ── 3. Auth guard — only saving and integrations require sign-in ─
+  // Note: /api/share/ is intentionally NOT here — it handles its own auth internally
   const requiresAuth =
     path.startsWith('/api/save') ||
     path.startsWith('/api/integrations/') ||
-    path.startsWith('/api/drive/')
+    path.startsWith('/api/drive/') ||
+    path.startsWith('/api/meetings/')
 
   if (requiresAuth && !session) {
     return NextResponse.json(

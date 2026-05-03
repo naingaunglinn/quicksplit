@@ -54,3 +54,12 @@ export const teamsSchema = z.object({
   ),
   summary: summaryShape,
 })
+
+export const shareSettingsSchema = z.object({
+  mode:   z.enum(['private', 'public_link', 'restricted']),
+  emails: z.array(z.string().email()).optional(),
+})
+
+export const addShareEmailSchema = z.object({
+  email: z.string().email(),
+})
