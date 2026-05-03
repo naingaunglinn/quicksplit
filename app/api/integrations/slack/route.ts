@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { slackSchema } from '@/lib/validate'
 import { sanitizeShortString } from '@/lib/sanitize'
 import { postMeetingToSlack } from '@/lib/slack'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { config } from '@/lib/config'
 
 export const runtime = 'nodejs'
@@ -29,19 +29,16 @@ export async function POST(req: Request) {
       meetingUrl
     )
 
-    // Log integration (best-effort — never fail the response over this)
     try {
-      const supabase = await createClient()
-
-      // Resolve short_id → uuid
-      const { data: meeting } = await supabase
+      const admin = createAdminClient()
+      const { data: meeting } = await admin
         .from('meetings')
         .select('id')
         .eq('short_id', meetingId)
         .single()
 
       if (meeting) {
-        await supabase.from('integration_logs').insert({
+        await admin.from('integration_logs').insert({
           meeting_id: meeting.id,
           type:       'slack',
           channel:    safeChannel,

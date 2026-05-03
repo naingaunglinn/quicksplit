@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient } from '@/lib/supabase/server'
+import { getUserFromRequest } from '@/lib/auth'
 import { addShareEmailSchema } from '@/lib/validate'
 
 export const runtime = 'nodejs'
@@ -11,10 +11,9 @@ export async function POST(
 ) {
   try {
     const { id } = await params
-    const serverClient = await createClient()
-    const { data: { session } } = await serverClient.auth.getSession()
+    const user   = getUserFromRequest(req)
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
@@ -30,7 +29,7 @@ export async function POST(
       return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
     }
 
-    if (meeting.user_id !== session.user.id) {
+    if (meeting.user_id !== user.id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 

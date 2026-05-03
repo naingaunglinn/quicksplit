@@ -1,6 +1,7 @@
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { format } from 'date-fns'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Header from '@/components/Header'
 import { Badge } from '@/components/ui/badge'
 import { Mic, FileText, Video, ChevronRight } from 'lucide-react'
@@ -12,10 +13,10 @@ const inputIcons = {
 }
 
 export default async function MeetingsPage() {
-  const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const h      = await headers()
+  const userId = h.get('x-user-id')
 
-  if (!session) {
+  if (!userId) {
     return (
       <>
         <Header />
@@ -29,10 +30,11 @@ export default async function MeetingsPage() {
     )
   }
 
-  const { data: rows } = await supabase
+  const admin = createAdminClient()
+  const { data: rows } = await admin
     .from('meetings')
     .select('short_id, summary, input_type, created_at')
-    .eq('user_id', session.user.id)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(50)
 

@@ -1,10 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Zap } from 'lucide-react'
 import { toast } from 'sonner'
-import type { User } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -14,39 +13,36 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { supabase } from '@/lib/supabase/client'
-import { syncUserProfile } from '@/lib/supabase/syncProfile'
+import type { AppUser } from '@/lib/auth'
 
 export default function Header() {
-  const [user, setUser]           = useState<User | null>(null)
-  const [open, setOpen]           = useState(false)
-  const [email, setEmail]         = useState('')
-  const [loading, setLoading]     = useState(false)
-  const [sent, setSent]           = useState(false)
+  const [user, setUser]       = useState<AppUser | null | undefined>(undefined)
+  const [open, setOpen]       = useState(false)
+  const [email, setEmail]     = useState('')
+  const [loading, setLoading] = useState(false)
+  const [sent, setSent]       = useState(false)
 
-  // Track auth state
-  useEffect(() => {
-    // Initial session
-    supabase.auth.getSession().then(({ data }) => {
-      const u = data.session?.user ?? null
-      setUser(u)
-      if (u) void syncUserProfile(u)
-    })
-
-    // Listen for changes (magic link callback, sign-out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        void syncUserProfile(session.user)
-        setOpen(false)
-        setSent(false)
-        setEmail('')
-        toast.success('Signed in successfully!')
+  const fetchUser = useCallback(async () => {
+    try {
+      const res = await fetch('/api/auth/me')
+      if (res.ok) {
+        const data = await res.json()
+        setUser({ id: data.id, email: data.email })
+      } else {
+        setUser(null)
       }
-    })
-
-    return () => subscription.unsubscribe()
+    } catch {
+      setUser(null)
+    }
   }, [])
+
+  useEffect(() => {
+    void fetchUser()
+    // Re-check when the tab regains focus (covers sign-in in another tab)
+    const onFocus = () => void fetchUser()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [fetchUser])
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault()
@@ -69,7 +65,7 @@ export default function Header() {
   }
 
   async function handleSignOut() {
-    await supabase.auth.signOut()
+    await fetch('/api/auth/logout', { method: 'POST' })
     setUser(null)
     toast.success('Signed out')
   }
@@ -97,7 +93,7 @@ export default function Header() {
               </Button>
             </div>
           ) : (
-            <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+            <Button variant="ghost" size="sm" onClick={() => setOpen(true)} disabled={user === undefined}>
               Sign in
             </Button>
           )}

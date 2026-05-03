@@ -1,6 +1,6 @@
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { SavedMeeting } from '@/types'
 import Header from '@/components/Header'
@@ -16,7 +16,6 @@ export default async function MeetingPage({
 }) {
   const { id } = await params
 
-  // Use admin client to fetch (bypasses RLS so we can check ownership ourselves)
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('meetings')
@@ -26,15 +25,12 @@ export default async function MeetingPage({
 
   if (error || !data) return <NotFound />
 
-  // Check session — only the owner may view this page
-  const serverClient = await createClient()
-  const { data: { session } } = await serverClient.auth.getSession()
+  const h      = await headers()
+  const userId = h.get('x-user-id')
 
-  const isOwner = session?.user?.id && session.user.id === data.user_id
+  const isOwner = userId && userId === data.user_id
 
   if (!isOwner) {
-    // Redirect non-owners to the share URL if one exists (access control enforced there)
-    // otherwise show NotFound to avoid leaking that the meeting exists
     if (data.share_token) {
       redirect(`/share/${data.share_token}`)
     }

@@ -1,21 +1,19 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient } from '@/lib/supabase/server'
+import { getUserFromRequest } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string; email: string }> }
 ) {
   try {
     const { id, email: emailParam } = await params
     const targetEmail = decodeURIComponent(emailParam).toLowerCase()
+    const user        = getUserFromRequest(req)
 
-    const serverClient = await createClient()
-    const { data: { session } } = await serverClient.auth.getSession()
-
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
@@ -31,7 +29,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
     }
 
-    if (meeting.user_id !== session.user.id) {
+    if (meeting.user_id !== user.id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 

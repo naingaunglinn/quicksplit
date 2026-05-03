@@ -47,6 +47,16 @@ export function getSessionFromRequest(req: NextRequest | Request): SessionPayloa
   return verifyToken(token)
 }
 
+export type AppUser = { id: string; email: string }
+
+/** Read user identity forwarded by proxy.ts via request headers. */
+export function getUserFromRequest(req: Request): AppUser | null {
+  const id    = req.headers.get('x-user-id')
+  const email = req.headers.get('x-user-email')
+  if (!id || !email) return null
+  return { id, email }
+}
+
 function parseCookieHeader(header: string | null): Record<string, string> {
   if (!header) return {}
   const out: Record<string, string> = {}

@@ -11,7 +11,6 @@ import EmailDrafter from '@/components/EmailDrafter'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { supabase } from '@/lib/supabase/client'
 
 interface MeetingData {
   shortId:   string
@@ -96,7 +95,7 @@ export default function SharePage({
   }
 
   async function handleSignOutAndReload() {
-    await supabase.auth.signOut()
+    await fetch('/api/auth/logout', { method: 'POST' })
     window.location.reload()
   }
 

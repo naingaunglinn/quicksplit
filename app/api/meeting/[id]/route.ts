@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
 
@@ -9,9 +9,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const supabase = await createClient()
+    const admin  = createAdminClient()
 
-    const { data: meeting, error } = await supabase
+    const { data: meeting, error } = await admin
       .from('meetings')
       .select('*, tasks(*)')
       .eq('short_id', id)

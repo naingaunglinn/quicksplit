@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { nanoid } from 'nanoid'
 import { saveSchema } from '@/lib/validate'
 import { sanitizeText } from '@/lib/sanitize'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getUserFromRequest } from '@/lib/auth'
 import { config } from '@/lib/config'
 
 export const runtime = 'nodejs'
@@ -22,22 +23,19 @@ export async function POST(req: Request) {
     const { transcript, summary, inputType } = parsed.data
     const sanitizedTranscript = sanitizeText(transcript)
     const shortId = nanoid(8)
-
-    const supabase = await createClient()
-
-    // Get current user (may be null for anonymous saves)
-    const { data: { session } } = await supabase.auth.getSession()
-
     const shareToken = nanoid(21)
 
-    const { data: meeting, error: meetingError } = await supabase
+    const user  = getUserFromRequest(req)
+    const admin = createAdminClient()
+
+    const { data: meeting, error: meetingError } = await admin
       .from('meetings')
       .insert({
         short_id:    shortId,
         transcript:  sanitizedTranscript,
         summary:     { summary: summary.summary, decisions: summary.decisions },
         input_type:  inputType,
-        user_id:     session?.user?.id ?? null,
+        user_id:     user?.id ?? null,
         share_token: shareToken,
       })
       .select('id')
@@ -48,9 +46,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Failed to save meeting' }, { status: 500 })
     }
 
-    // Batch insert tasks
     if (summary.tasks.length > 0) {
-      const { error: tasksError } = await supabase
+      const { error: tasksError } = await admin
         .from('tasks')
         .insert(
           summary.tasks.map(task => ({
@@ -63,7 +60,6 @@ export async function POST(req: Request) {
 
       if (tasksError) {
         console.error('[save] Tasks insert error:', tasksError)
-        // Non-fatal — meeting is saved, tasks failed
       }
     }
 

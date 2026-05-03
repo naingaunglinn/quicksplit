@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { nanoid } from 'nanoid'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient } from '@/lib/supabase/server'
+import { getUserFromRequest } from '@/lib/auth'
 import { shareSettingsSchema } from '@/lib/validate'
 
 export const runtime = 'nodejs'
@@ -20,19 +20,18 @@ async function getOwnerMeeting(shortId: string, userId: string) {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
-    const serverClient = await createClient()
-    const { data: { session } } = await serverClient.auth.getSession()
+    const user   = getUserFromRequest(req)
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const meeting = await getOwnerMeeting(id, session.user.id)
+    const meeting = await getOwnerMeeting(id, user.id)
     if (!meeting) {
       return NextResponse.json({ error: 'Meeting not found or access denied' }, { status: 404 })
     }
@@ -54,14 +53,13 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
-    const serverClient = await createClient()
-    const { data: { session } } = await serverClient.auth.getSession()
+    const user   = getUserFromRequest(req)
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const meeting = await getOwnerMeeting(id, session.user.id)
+    const meeting = await getOwnerMeeting(id, user.id)
     if (!meeting) {
       return NextResponse.json({ error: 'Meeting not found or access denied' }, { status: 404 })
     }
@@ -76,8 +74,6 @@ export async function PATCH(
     }
 
     const { mode, emails } = parsed.data
-
-    // Generate share_token if not yet set
     const shareToken = meeting.share_token ?? nanoid(21)
 
     const updatePayload: Record<string, unknown> = {

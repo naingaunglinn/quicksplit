@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient } from '@/lib/supabase/server'
+import { getUserFromRequest } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
     const { token } = await params
-    const admin = createAdminClient()
+    const admin     = createAdminClient()
 
     const { data: meeting, error } = await admin
       .from('meetings')
@@ -45,35 +45,27 @@ export async function GET(
       return NextResponse.json(responseData)
     }
 
-    // restricted mode — check session
-    const serverClient = await createClient()
-    const { data: { session } } = await serverClient.auth.getSession()
-
-    if (!session) {
+    // restricted mode — require signed-in user
+    const user = getUserFromRequest(req)
+    if (!user) {
       return NextResponse.json({ error: 'auth_required' }, { status: 401 })
     }
 
     // Owner always gets access
-    if (meeting.user_id && session.user.id === meeting.user_id) {
+    if (meeting.user_id && user.id === meeting.user_id) {
       return NextResponse.json(responseData)
     }
 
-    // Look up email from profiles table
-    const { data: profile } = await admin
-      .from('profiles')
-      .select('email')
-      .eq('id', session.user.id)
-      .single()
+    // Check allowed_emails against the JWT-issued email
+    const userEmail     = user.email.toLowerCase()
+    const allowedEmails = (meeting.allowed_emails ?? []).map((e: string) => e.toLowerCase())
 
-    const userEmail = (profile?.email ?? '').toLowerCase()
-    const allowedEmails: string[] = (meeting.allowed_emails ?? []).map((e: string) => e.toLowerCase())
-
-    if (userEmail && allowedEmails.includes(userEmail)) {
+    if (allowedEmails.includes(userEmail)) {
       return NextResponse.json(responseData)
     }
 
     return NextResponse.json(
-      { error: 'access_denied', userEmail: profile?.email ?? session.user.email ?? '' },
+      { error: 'access_denied', userEmail: user.email },
       { status: 403 }
     )
   } catch (err) {
