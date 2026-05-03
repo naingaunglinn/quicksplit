@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid'
 import { saveSchema } from '@/lib/validate'
 import { sanitizeText } from '@/lib/sanitize'
 import { createClient } from '@/lib/supabase/server'
+import { config } from '@/lib/config'
 
 export const runtime = 'nodejs'
 
@@ -27,14 +28,17 @@ export async function POST(req: Request) {
     // Get current user (may be null for anonymous saves)
     const { data: { session } } = await supabase.auth.getSession()
 
+    const shareToken = nanoid(21)
+
     const { data: meeting, error: meetingError } = await supabase
       .from('meetings')
       .insert({
-        short_id:   shortId,
-        transcript: sanitizedTranscript,
-        summary:    { summary: summary.summary, decisions: summary.decisions },
-        input_type: inputType,
-        user_id:    session?.user?.id ?? null,
+        short_id:    shortId,
+        transcript:  sanitizedTranscript,
+        summary:     { summary: summary.summary, decisions: summary.decisions },
+        input_type:  inputType,
+        user_id:     session?.user?.id ?? null,
+        share_token: shareToken,
       })
       .select('id')
       .single()
@@ -63,8 +67,8 @@ export async function POST(req: Request) {
       }
     }
 
-    const url = `${process.env.NEXT_PUBLIC_APP_URL}/meeting/${shortId}`
-    return NextResponse.json({ id: shortId, url })
+    const url = `${config.NEXT_PUBLIC_APP_URL}/meeting/${shortId}`
+    return NextResponse.json({ id: shortId, url, shareToken })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Save failed'
     return NextResponse.json({ error: message }, { status: 500 })

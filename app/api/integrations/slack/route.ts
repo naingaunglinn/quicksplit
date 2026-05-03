@@ -3,6 +3,7 @@ import { slackSchema } from '@/lib/validate'
 import { sanitizeShortString } from '@/lib/sanitize'
 import { postMeetingToSlack } from '@/lib/slack'
 import { createClient } from '@/lib/supabase/server'
+import { config } from '@/lib/config'
 
 export const runtime = 'nodejs'
 
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
 
     const { meetingId, channel, summary } = parsed.data
     const safeChannel = sanitizeShortString(channel)
-    const meetingUrl  = `${process.env.NEXT_PUBLIC_APP_URL}/meeting/${meetingId}`
+    const meetingUrl  = `${config.NEXT_PUBLIC_APP_URL}/meeting/${meetingId}`
 
     const result = await postMeetingToSlack(
       safeChannel,

@@ -1,6 +1,26 @@
 // Lazy config — reads process.env only when a key is accessed,
 // so missing vars throw at request time, not during next build.
 
+/** Public origin for links (magic redirect, share URLs). No trailing slash. */
+export function resolvePublicAppUrl(): string {
+  const explicit = process.env.NEXT_PUBLIC_APP_URL?.trim()
+  if (explicit) return explicit.replace(/\/+$/, '')
+
+  // Vercel sets this automatically (preview + production hostnames)
+  const vercel = process.env.VERCEL_URL?.trim()
+  if (vercel) return `https://${vercel.replace(/\/+$/, '')}`
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'Set NEXT_PUBLIC_APP_URL to your live site origin (e.g. https://app.example.com). ' +
+        'Magic links and emails use this for redirect_to. On Vercel you can rely on VERCEL_URL, ' +
+        'but a custom domain should set NEXT_PUBLIC_APP_URL explicitly.'
+    )
+  }
+
+  return 'http://localhost:3000'
+}
+
 const REQUIRED_SERVER = new Set([
   'GEMINI_API_KEY',
   'SUPABASE_SERVICE_ROLE_KEY',
@@ -51,7 +71,7 @@ export const config: Config = new Proxy({} as Config, {
         throw new Error(`Missing required environment variable: ${key}`)
       }
       // Optional vars with defaults
-      if (key === 'NEXT_PUBLIC_APP_URL') return 'http://localhost:3000'
+      if (key === 'NEXT_PUBLIC_APP_URL') return resolvePublicAppUrl()
       if (key === 'AI_PROVIDER')         return 'gemini'
       if (key === 'GEMINI_MODEL')        return 'gemini-2.0-flash-lite'
       if (key === 'OPENAI_MODEL')        return 'gpt-4.1-mini'
@@ -60,6 +80,7 @@ export const config: Config = new Proxy({} as Config, {
       return ''
     }
 
+    if (key === 'NEXT_PUBLIC_APP_URL') return String(value).trim().replace(/\/+$/, '')
     return value
   },
 })

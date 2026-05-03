@@ -21,9 +21,10 @@ interface MeetingStore {
   summary:   string[]
   decisions: string[]
   tasks:     Task[]
-  email:     string
-  meetingId: string | null
-  shareUrl:  string | null
+  email:      string
+  meetingId:  string | null
+  shareUrl:   string | null
+  shareToken: string | null
 
   // ── Email options ───────────────────────────────────────────
   language: Language
@@ -83,9 +84,10 @@ export const useMeetingStore = create<MeetingStore>((set, get) => ({
   summary:   [],
   decisions: [],
   tasks:     [],
-  email:     '',
-  meetingId: null,
-  shareUrl:  null,
+  email:      '',
+  meetingId:  null,
+  shareUrl:   null,
+  shareToken: null,
 
   // ── Email options ───────────────────────────────────────────
   language: 'en',
@@ -196,7 +198,7 @@ export const useMeetingStore = create<MeetingStore>((set, get) => ({
     try {
       set({ isSaving: true, error: null })
 
-      const { id, url } = await apiFetch<{ id: string; url: string }>(
+      const { id, url, shareToken } = await apiFetch<{ id: string; url: string; shareToken: string }>(
         '/api/save',
         {
           method:      'POST',
@@ -210,7 +212,7 @@ export const useMeetingStore = create<MeetingStore>((set, get) => ({
         }
       )
 
-      set({ isSaving: false, meetingId: id, shareUrl: `/meeting/${id}` })
+      set({ isSaving: false, meetingId: id, shareUrl: `/meeting/${id}`, shareToken })
       toast.success('Meeting saved!')
       void url // url returned from API — shareUrl is derived locally for consistency
     } catch (err) {
@@ -291,6 +293,7 @@ export const useMeetingStore = create<MeetingStore>((set, get) => ({
     email:           '',
     meetingId:       null,
     shareUrl:        null,
+    shareToken:      null,
     language:        'en',
     tone:            'casual',
     slackChannel:    '',
