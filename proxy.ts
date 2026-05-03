@@ -75,12 +75,13 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // ── 3. Auth guard on protected API routes ────────────────────
-  const isProtectedApi = path.startsWith('/api/')
-    && !path.startsWith('/api/meeting/')
-    && !path.startsWith('/api/auth/')
+  // ── 3. Auth guard — only saving and integrations require sign-in ─
+  const requiresAuth =
+    path.startsWith('/api/save') ||
+    path.startsWith('/api/integrations/') ||
+    path.startsWith('/api/drive/')
 
-  if (isProtectedApi && !session) {
+  if (requiresAuth && !session) {
     return NextResponse.json(
       { error: 'Authentication required' },
       { status: 401 }

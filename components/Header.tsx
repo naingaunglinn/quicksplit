@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { supabase } from '@/lib/supabase/client'
+import { syncUserProfile } from '@/lib/supabase/syncProfile'
 
 export default function Header() {
   const [user, setUser]           = useState<User | null>(null)
@@ -26,12 +27,17 @@ export default function Header() {
   // Track auth state
   useEffect(() => {
     // Initial session
-    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null))
+    supabase.auth.getSession().then(({ data }) => {
+      const u = data.session?.user ?? null
+      setUser(u)
+      if (u) void syncUserProfile(u)
+    })
 
     // Listen for changes (magic link callback, sign-out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) {
+        void syncUserProfile(session.user)
         setOpen(false)
         setSent(false)
         setEmail('')
@@ -47,13 +53,11 @@ export default function Header() {
     if (!email.trim()) return
     setLoading(true)
     try {
-      const res  = await fetch('/api/auth/magic-link', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ email: email.trim() }),
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Failed to send sign-in link')
+      if (error) throw error
       setSent(true)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to send sign-in link')

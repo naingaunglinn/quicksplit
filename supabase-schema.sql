@@ -1,3 +1,37 @@
+-- ── PROFILES (public mirror of auth.users) ───────────────────
+CREATE TABLE profiles (
+  id         uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email      text,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "profiles_owner_read" ON profiles
+  FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "profiles_owner_update" ON profiles
+  FOR UPDATE USING (auth.uid() = id);
+
+-- Allow the signed-in user to insert their own row if the signup trigger did not run (e.g. legacy users)
+CREATE POLICY "profiles_owner_insert" ON profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- Auto-create profile on signup
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO profiles (id, email)
+  VALUES (new.id, new.email)
+  ON CONFLICT (id) DO NOTHING;
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
 -- ── MEETINGS ─────────────────────────────────────────────────
 CREATE TABLE meetings (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),

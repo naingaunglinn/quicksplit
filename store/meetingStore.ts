@@ -199,9 +199,10 @@ export const useMeetingStore = create<MeetingStore>((set, get) => ({
       const { id, url } = await apiFetch<{ id: string; url: string }>(
         '/api/save',
         {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({
+          method:      'POST',
+          credentials: 'include',
+          headers:     { 'Content-Type': 'application/json' },
+          body:        JSON.stringify({
             transcript,
             summary:   { summary, decisions, tasks },
             inputType: inputMode,
