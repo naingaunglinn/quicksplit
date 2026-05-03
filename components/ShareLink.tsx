@@ -27,12 +27,14 @@ export default function ShareLink() {
   async function handleSignIn() {
     const email = prompt('Enter your email to receive a sign-in link:')
     if (!email?.trim()) return
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    const res  = await fetch('/api/auth/magic-link', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email: email.trim() }),
     })
-    if (error) toast.error(error.message)
-    else toast.success(`Magic link sent to ${email}`)
+    const data = await res.json()
+    if (!res.ok) toast.error(data.error ?? 'Failed to send sign-in link')
+    else toast.success(`Sign-in link sent to ${email}`)
   }
 
   return (
