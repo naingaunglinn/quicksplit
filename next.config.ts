@@ -1,7 +1,14 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
+  serverExternalPackages: [
+    'fluent-ffmpeg',
+    '@ffmpeg-installer/ffmpeg',
+    'formidable',
+  ],
+  experimental: {
+    proxyClientMaxBodySize: '210mb', // 200MB file + multipart overhead
+  },
+}
 
-export default nextConfig;
+export default nextConfig
