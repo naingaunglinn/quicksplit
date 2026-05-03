@@ -9,13 +9,15 @@ import { useMeetingStore } from '@/store/meetingStore'
 import { useUser } from '@/lib/hooks/useUser'
 import { supabase } from '@/lib/supabase/client'
 
-export default function ShareLink() {
-  const shareUrl    = useMeetingStore(s => s.shareUrl)
-  const isSaving    = useMeetingStore(s => s.isSaving)
-  const saveMeeting = useMeetingStore(s => s.saveMeeting)
-  const user        = useUser()
+export default function ShareLink({ staticUrl }: { staticUrl?: string }) {
+  const storeShareUrl = useMeetingStore(s => s.shareUrl)
+  const isSaving      = useMeetingStore(s => s.isSaving)
+  const saveMeeting   = useMeetingStore(s => s.saveMeeting)
+  const user          = useUser()
 
-  const fullUrl = shareUrl
+  // staticUrl prop wins (used on detail pages where meeting is already saved)
+  const shareUrl = staticUrl ?? storeShareUrl
+  const fullUrl  = shareUrl
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}${shareUrl}`
     : ''
 
@@ -27,12 +29,14 @@ export default function ShareLink() {
   async function handleSignIn() {
     const email = prompt('Enter your email to receive a sign-in link:')
     if (!email?.trim()) return
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    const res  = await fetch('/api/auth/magic-link', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email: email.trim() }),
     })
-    if (error) toast.error(error.message)
-    else toast.success(`Magic link sent to ${email}`)
+    const data = await res.json()
+    if (!res.ok) toast.error(data.error ?? 'Failed to send sign-in link')
+    else toast.success(`Sign-in link sent to ${email}`)
   }
 
   return (
