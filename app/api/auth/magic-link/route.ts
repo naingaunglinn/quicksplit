@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -5,6 +6,8 @@ import { sendEmail } from '@/lib/mailer'
 import { config } from '@/lib/config'
 
 export const runtime = 'nodejs'
+
+const TOKEN_TTL_MINUTES = 60
 
 const schema = z.object({ email: z.string().email() })
 
@@ -16,19 +19,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
     }
 
-    const { email } = parsed.data
-    const appUrl    = config.NEXT_PUBLIC_APP_URL
+    const email   = parsed.data.email.trim().toLowerCase()
+    const appUrl  = config.NEXT_PUBLIC_APP_URL
+    const token   = randomBytes(32).toString('hex')
+    const expires = new Date(Date.now() + TOKEN_TTL_MINUTES * 60_000).toISOString()
 
     const supabase = createAdminClient()
-    const { data, error } = await supabase.auth.admin.generateLink({
-      type:    'magiclink',
-      email,
-      options: { redirectTo: `${appUrl}/auth/callback` },
-    })
+    const { error: insertErr } = await supabase
+      .from('auth_tokens')
+      .insert({ email, token, expires_at: expires })
 
-    if (error || !data.properties?.action_link) {
-      throw new Error(error?.message ?? 'Failed to generate sign-in link')
+    if (insertErr) {
+      throw new Error(insertErr.message)
     }
+
+    const link = `${appUrl}/auth/callback?token=${token}`
 
     await sendEmail({
       to:      email,
@@ -38,9 +43,9 @@ export async function POST(req: Request) {
         '',
         'Click the link below to sign in to QuickSplit:',
         '',
-        data.properties.action_link,
+        link,
         '',
-        'This link expires in 1 hour. If you did not request this, ignore this email.',
+        `This link expires in ${TOKEN_TTL_MINUTES} minutes. If you did not request this, ignore this email.`,
         '',
         '— QuickSplit',
       ].join('\n'),

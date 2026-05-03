@@ -1,6 +1,6 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { getSessionFromRequest } from '@/lib/auth'
 
 const RATE_LIMIT_MAP: Record<string, { max: number; windowMs: number }> = {
   '/api/transcribe':         { max: 5,  windowMs: 15 * 60 * 1000 },
@@ -25,16 +25,30 @@ function edgeRateLimit(key: string, max: number, windowMs: number): boolean {
 }
 
 export async function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname
+
+  // ── 1. Verify session (custom JWT in httpOnly cookie) ────────
+  const session = getSessionFromRequest(request)
+
+  // Forward identity to downstream route handlers via request headers.
+  const requestHeaders = new Headers(request.headers)
+  if (session) {
+    requestHeaders.set('x-user-id',    session.sub)
+    requestHeaders.set('x-user-email', session.email)
+  } else {
+    requestHeaders.delete('x-user-id')
+    requestHeaders.delete('x-user-email')
+  }
+
   const response = NextResponse.next({
-    request: { headers: request.headers },
+    request: { headers: requestHeaders },
   })
 
-  // ── 1. Security headers ──────────────────────────────────────
+  // ── 2. Security headers ──────────────────────────────────────
   response.headers.set('X-Content-Type-Options', 'nosniff')
   response.headers.set('X-Frame-Options', 'DENY')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
-  // Relaxed CSP: allow Next.js dev WS + blob for audio recording
   response.headers.set(
     'Content-Security-Policy',
     [
@@ -49,34 +63,8 @@ export async function proxy(request: NextRequest) {
     ].join('; ')
   )
 
-  const path = request.nextUrl.pathname
-
-  // ── 2. Supabase session refresh (skip if not configured) ─────
-  let session = null
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  if (supabaseUrl && supabaseKey) {
-    try {
-      const supabase = createServerClient(supabaseUrl, supabaseKey, {
-        cookies: {
-          getAll() { return request.cookies.getAll() },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              response.cookies.set({ name, value, ...options })
-            )
-          },
-        },
-      })
-      const { data } = await supabase.auth.getSession()
-      session = data.session
-    } catch {
-      // Supabase unreachable — allow request through unauthenticated
-    }
-  }
-
-  // ── 3. Auth guard — only saving and integrations require sign-in ─
-  // Note: /api/share/ is intentionally NOT here — it handles its own auth internally
+  // ── 3. Auth guard — same routes as before ────────────────────
+  // /api/share/ and /api/auth/ intentionally excluded.
   const requiresAuth =
     path.startsWith('/api/save') ||
     path.startsWith('/api/integrations/') ||
