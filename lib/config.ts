@@ -17,6 +17,14 @@ const REQUIRED_PUBLIC = new Set([
 ])
 
 export type Config = {
+  // ── SMTP ─────────────────────────────────────────────────────────────────
+  SMTP_HOST: string  // default: smtp.gmail.com
+  SMTP_PORT: string  // default: 587
+  SMTP_USER: string  // Gmail address (or any SMTP username)
+  SMTP_PASS: string  // App password
+  SMTP_FROM: string  // optional — defaults to SMTP_USER
+
+  // ── AI ───────────────────────────────────────────────────────────────────
   AI_PROVIDER:                 string  // 'gemini' (default) | 'openai' — master switch for all AI tasks
   GEMINI_API_KEY:              string
   GEMINI_MODEL:                string  // default: gemini-2.0-flash-lite; paid plans can use gemini-2.0-flash
@@ -47,6 +55,8 @@ export const config: Config = new Proxy({} as Config, {
       if (key === 'AI_PROVIDER')         return 'gemini'
       if (key === 'GEMINI_MODEL')        return 'gemini-2.0-flash-lite'
       if (key === 'OPENAI_MODEL')        return 'gpt-4.1-mini'
+      if (key === 'SMTP_HOST')           return 'smtp.gmail.com'
+      if (key === 'SMTP_PORT')           return '587'
       return ''
     }
 

@@ -47,11 +47,13 @@ export default function Header() {
     if (!email.trim()) return
     setLoading(true)
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: { shouldCreateUser: true },
+      const res  = await fetch('/api/auth/magic-link', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email: email.trim() }),
       })
-      if (error) throw error
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed to send sign-in link')
       setSent(true)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to send sign-in link')
