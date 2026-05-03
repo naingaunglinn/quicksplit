@@ -1,9 +1,11 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { SavedMeeting } from '@/types'
 import Header from '@/components/Header'
 import MeetingReadOnly from '@/components/MeetingReadOnly'
+import NotFound from '@/app/not-found'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Plus } from 'lucide-react'
 
@@ -13,17 +15,32 @@ export default async function MeetingPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createClient()
 
-  const { data, error } = await supabase
+  // Use admin client to fetch (bypasses RLS so we can check ownership ourselves)
+  const admin = createAdminClient()
+  const { data, error } = await admin
     .from('meetings')
     .select('*, tasks(*)')
     .eq('short_id', id)
     .single()
 
-  if (error || !data) notFound()
+  if (error || !data) return <NotFound />
 
-  // Normalize DB row → SavedMeeting shape expected by MeetingReadOnly
+  // Check session — only the owner may view this page
+  const serverClient = await createClient()
+  const { data: { session } } = await serverClient.auth.getSession()
+
+  const isOwner = session?.user?.id && session.user.id === data.user_id
+
+  if (!isOwner) {
+    // Redirect non-owners to the share URL if one exists (access control enforced there)
+    // otherwise show NotFound to avoid leaking that the meeting exists
+    if (data.share_token) {
+      redirect(`/share/${data.share_token}`)
+    }
+    return <NotFound />
+  }
+
   const meeting: SavedMeeting = {
     id:        data.short_id,
     shortId:   data.short_id,
@@ -43,7 +60,6 @@ export default async function MeetingPage({
       <Header />
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
 
-        {/* Back navigation */}
         <div className="flex items-center justify-between">
           <Link
             href="/meetings"
