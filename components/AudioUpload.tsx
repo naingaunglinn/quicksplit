@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useMeetingStore } from '@/store/meetingStore'
 
-const MAX_SIZE = 200 * 1024 * 1024 // 200MB
+const MAX_SIZE = 50 * 1024 * 1024 // 50 MB
 
 function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -26,7 +26,7 @@ export default function AudioUpload() {
   const onDrop = useCallback((accepted: File[], rejected: FileRejection[]) => {
     if (rejected.length > 0) {
       const code = rejected[0]?.errors[0]?.code
-      if (code === 'file-too-large') toast.error('File exceeds 200MB limit.')
+      if (code === 'file-too-large') toast.error('File exceeds 50 MB limit.')
       else toast.error('Invalid file type. Use MP3, WAV, M4A, WebM, or OGG.')
       return
     }
@@ -71,7 +71,7 @@ export default function AudioUpload() {
         <div className="flex flex-col items-center gap-2">
           <Mic size={36} className="text-neutral-400" />
           <p className="font-medium">Drop your audio file here</p>
-          <p className="text-sm text-muted-foreground">MP3, WAV, M4A, WebM up to 200MB</p>
+          <p className="text-sm text-muted-foreground">MP3, WAV, M4A, WebM up to 50 MB</p>
           <Button variant="outline" size="sm" className="mt-2" onClick={e => { e.stopPropagation(); open() }}>
             Browse files
           </Button>

@@ -6,6 +6,8 @@ interface Props {
 }
 
 export default function DecisionList({ decisions }: Props) {
+  if (!decisions.length) return null
+
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">

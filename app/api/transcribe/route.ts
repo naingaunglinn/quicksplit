@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server'
-import formidable from 'formidable'
 import { Readable } from 'stream'
-import { IncomingMessage } from 'http'
-import fs from 'fs'
 import { extractAudioFromStream } from '@/lib/ffmpeg'
 import { config } from '@/lib/config'
 
@@ -20,39 +17,22 @@ const ALLOWED_VIDEO_TYPES = new Set([
 
 const ALLOWED_MIME_TYPES = new Set([...ALLOWED_AUDIO_TYPES, ...ALLOWED_VIDEO_TYPES])
 
-async function parseMultipart(req: Request): Promise<{ buffer: Buffer; mimeType: string; fileName: string }> {
-  const form = formidable({ maxFileSize: 200 * 1024 * 1024 })
+async function parseFormFile(req: Request): Promise<{ buffer: Buffer; mimeType: string }> {
+  const formData  = await req.formData()
+  const fileEntry = formData.get('file')
 
-  const arrayBuffer = await req.arrayBuffer()
-  const reqBuffer   = Buffer.from(arrayBuffer)
-  const contentType = req.headers.get('content-type') ?? ''
+  if (!fileEntry || typeof fileEntry === 'string') throw new Error('No file field in request')
 
-  const nodeReq = Object.assign(Readable.from(reqBuffer), {
-    headers: { 'content-type': contentType, 'content-length': String(reqBuffer.length) },
-    method:  'POST',
-  }) as unknown as IncomingMessage
-
-  return new Promise((resolve, reject) => {
-    form.parse(nodeReq, (err, _fields, files) => {
-      if (err) return reject(new Error(`Form parse error: ${err.message}`))
-
-      const fileField = files.file
-      const file = Array.isArray(fileField) ? fileField[0] : fileField
-      if (!file) return reject(new Error('No file field in request'))
-
-      const mimeType   = file.mimetype ?? ''
-      const fileName   = file.originalFilename ?? 'upload'
-      const fileBuffer = fs.readFileSync(file.filepath)
-      fs.unlinkSync(file.filepath)
-
-      resolve({ buffer: fileBuffer, mimeType, fileName })
-    })
-  })
+  const file = fileEntry as File
+  return {
+    buffer:   Buffer.from(await file.arrayBuffer()),
+    mimeType: file.type || '',
+  }
 }
 
 export async function POST(req: Request) {
   try {
-    const { buffer, mimeType } = await parseMultipart(req)
+    const { buffer, mimeType } = await parseFormFile(req)
 
     if (!ALLOWED_MIME_TYPES.has(mimeType)) {
       return NextResponse.json(
@@ -64,15 +44,13 @@ export async function POST(req: Request) {
     let audioBuffer: Buffer
 
     if (ALLOWED_VIDEO_TYPES.has(mimeType)) {
-      // Extract audio track from video in-memory — no Drive needed
-      const videoStream = Readable.from(buffer)
-      audioBuffer = await extractAudioFromStream(videoStream)
+      audioBuffer = await extractAudioFromStream(Readable.from(buffer))
     } else {
       audioBuffer = buffer
     }
 
     const audioMimeType = ALLOWED_VIDEO_TYPES.has(mimeType) ? 'audio/mpeg' : mimeType
-    const provider = config.TRANSCRIPTION_PROVIDER || config.AI_PROVIDER
+    const provider      = config.TRANSCRIPTION_PROVIDER || config.AI_PROVIDER
 
     let transcript: string
     if (provider === 'openai') {

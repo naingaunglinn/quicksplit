@@ -7,6 +7,8 @@ interface Props {
 }
 
 export default function TaskList({ tasks }: Props) {
+  if (!tasks.length) return null
+
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">

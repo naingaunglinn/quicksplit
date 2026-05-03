@@ -1,8 +1,11 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { SavedMeeting } from '@/types'
 import Header from '@/components/Header'
 import MeetingReadOnly from '@/components/MeetingReadOnly'
+import { Button } from '@/components/ui/button'
+import { ArrowLeft, Plus } from 'lucide-react'
 
 export default async function MeetingPage({
   params,
@@ -38,7 +41,23 @@ export default async function MeetingPage({
   return (
     <>
       <Header />
-      <main className="max-w-2xl mx-auto px-4 py-12">
+      <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+
+        {/* Back navigation */}
+        <div className="flex items-center justify-between">
+          <Link
+            href="/meetings"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft size={14} /> My Meetings
+          </Link>
+          <Link href="/">
+            <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5">
+              <Plus size={14} /> New Meeting
+            </Button>
+          </Link>
+        </div>
+
         <MeetingReadOnly meeting={meeting} />
       </main>
     </>

@@ -1,5 +1,7 @@
 'use client'
 
+import { Copy } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -56,11 +58,22 @@ export default function EmailDrafter() {
         </div>
 
         {email && (
-          <Textarea
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            className="min-h-[220px] text-sm font-mono"
-          />
+          <div className="space-y-2">
+            <Textarea
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="min-h-[220px] text-sm font-mono"
+            />
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { navigator.clipboard.writeText(email); toast.success('Email copied!') }}
+              >
+                <Copy size={13} className="mr-1.5" /> Copy
+              </Button>
+            </div>
+          </div>
         )}
 
         {!email && !isDrafting && (
