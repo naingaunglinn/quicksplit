@@ -10,7 +10,7 @@ function getStepLabel(state: {
   isDrafting: boolean
   isSaving: boolean
 }): string {
-  if (state.isUploading)    return 'Uploading file to storage...'
+  if (state.isUploading)    return 'Preparing file...'
   if (state.isTranscribing) return 'Transcribing audio with AI...'
   if (state.isExtracting)   return 'Extracting meeting intelligence...'
   if (state.isDrafting)     return 'Drafting follow-up email...'

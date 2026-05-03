@@ -27,6 +27,12 @@ export const saveSchema = z.object({
   inputType:  z.enum(['text', 'audio', 'video']),
 })
 
+export const sendEmailSchema = z.object({
+  to:      z.string().email(),
+  subject: z.string().min(1).max(300),
+  body:    z.string().min(1).max(50000),
+})
+
 export const translateSchema = z.object({
   summary:  summaryShape,
   language: z.enum(['en', 'ja', 'my']),

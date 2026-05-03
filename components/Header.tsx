@@ -47,11 +47,13 @@ export default function Header() {
     if (!email.trim()) return
     setLoading(true)
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: { shouldCreateUser: true },
+      const res  = await fetch('/api/auth/magic-link', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email: email.trim() }),
       })
-      if (error) throw error
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed to send sign-in link')
       setSent(true)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to send sign-in link')
@@ -70,18 +72,18 @@ export default function Header() {
     <>
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-neutral-200">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
+          <Link href="/" className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
             <Zap size={20} className="text-indigo-600 fill-indigo-600" />
             <span className="font-semibold text-xl tracking-tight">QuickSplit</span>
-          </div>
+          </Link>
 
           {user ? (
             <div className="flex items-center gap-3">
-              <Link href="/meetings" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
+              <Link href="/meetings" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 My Meetings
               </Link>
               <span className="text-xs text-muted-foreground hidden sm:block">·</span>
-              <span className="text-xs text-muted-foreground hidden sm:block">
+              <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-[160px]">
                 {user.email}
               </span>
               <Button variant="ghost" size="sm" onClick={handleSignOut}>

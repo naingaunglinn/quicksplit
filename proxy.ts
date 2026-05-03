@@ -76,7 +76,9 @@ export async function proxy(request: NextRequest) {
   }
 
   // ── 3. Auth guard on protected API routes ────────────────────
-  const isProtectedApi = path.startsWith('/api/') && !path.startsWith('/api/meeting/')
+  const isProtectedApi = path.startsWith('/api/')
+    && !path.startsWith('/api/meeting/')
+    && !path.startsWith('/api/auth/')
 
   if (isProtectedApi && !session) {
     return NextResponse.json(
