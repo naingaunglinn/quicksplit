@@ -44,7 +44,7 @@ export default function ResultsSection() {
       <TranslationPanel meeting={{ summary, decisions, tasks }} />
       <EmailDrafter   />
       <ShareLink      />
-      <IntegrationPanel />
+      {/*<IntegrationPanel />*/}
     </div>
   )
 }

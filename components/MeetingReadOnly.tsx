@@ -6,6 +6,8 @@ import SummaryCards from './SummaryCards'
 import DecisionList from './DecisionList'
 import TaskList from './TaskList'
 import TranslationPanel from './TranslationPanel'
+import ShareLink from "@/components/ShareLink";
+import EmailDrafter from "@/components/EmailDrafter";
 
 interface Props {
   meeting: SavedMeeting
@@ -27,7 +29,8 @@ export default function MeetingReadOnly({ meeting }: Props) {
       <DecisionList  decisions={meeting.decisions} />
       <TaskList      tasks={meeting.tasks} />
       <TranslationPanel meeting={{ summary: meeting.summary, decisions: meeting.decisions, tasks: meeting.tasks }} />
-
+      <EmailDrafter   />
+      <ShareLink      />
       <p className="text-xs text-muted-foreground text-center pt-8">
         Powered by QuickSplit · AI Meeting Intelligence
       </p>

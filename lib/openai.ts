@@ -10,12 +10,27 @@ function getClient() {
 
 // ── Transcription ────────────────────────────────────────────────────────────
 
+const MIME_TO_EXT: Record<string, string> = {
+  'audio/mpeg':  'mp3',
+  'audio/mp3':   'mp3',
+  'audio/mp4':   'mp4',
+  'audio/m4a':   'm4a',
+  'audio/x-m4a': 'm4a',
+  'audio/wav':   'wav',
+  'audio/x-wav': 'wav',
+  'audio/webm':  'webm',
+  'audio/ogg':   'ogg',
+  'audio/oga':   'oga',
+  'audio/flac':  'flac',
+}
+
 export async function transcribeAudio(
   audioBuffer: Buffer,
   mimeType: string = 'audio/mpeg'
 ): Promise<string> {
   const openai = getClient()
-  const file = await OpenAI.toFile(Readable.from(audioBuffer), 'audio.mp3', { type: mimeType })
+  const ext    = MIME_TO_EXT[mimeType] ?? 'mp3'
+  const file   = await OpenAI.toFile(Readable.from(audioBuffer), `audio.${ext}`, { type: mimeType })
 
   const response = await openai.audio.transcriptions.create({
     file,
