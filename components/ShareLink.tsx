@@ -9,13 +9,15 @@ import { useMeetingStore } from '@/store/meetingStore'
 import { useUser } from '@/lib/hooks/useUser'
 import { supabase } from '@/lib/supabase/client'
 
-export default function ShareLink() {
-  const shareUrl    = useMeetingStore(s => s.shareUrl)
-  const isSaving    = useMeetingStore(s => s.isSaving)
-  const saveMeeting = useMeetingStore(s => s.saveMeeting)
-  const user        = useUser()
+export default function ShareLink({ staticUrl }: { staticUrl?: string }) {
+  const storeShareUrl = useMeetingStore(s => s.shareUrl)
+  const isSaving      = useMeetingStore(s => s.isSaving)
+  const saveMeeting   = useMeetingStore(s => s.saveMeeting)
+  const user          = useUser()
 
-  const fullUrl = shareUrl
+  // staticUrl prop wins (used on detail pages where meeting is already saved)
+  const shareUrl = staticUrl ?? storeShareUrl
+  const fullUrl  = shareUrl
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}${shareUrl}`
     : ''
 

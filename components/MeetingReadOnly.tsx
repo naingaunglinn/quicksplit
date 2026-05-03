@@ -30,7 +30,7 @@ export default function MeetingReadOnly({ meeting }: Props) {
       <TaskList      tasks={meeting.tasks} />
       <TranslationPanel meeting={{ summary: meeting.summary, decisions: meeting.decisions, tasks: meeting.tasks }} />
       <EmailDrafter   />
-      <ShareLink      />
+      <ShareLink staticUrl={`/meeting/${meeting.shortId}`} />
       <p className="text-xs text-muted-foreground text-center pt-8">
         Powered by QuickSplit · AI Meeting Intelligence
       </p>
